@@ -1,0 +1,131 @@
+version: "3"
+
+networks:
+    backend:
+        driver: bridge
+
+services:
+
+    php-fpm:
+        container_name: php-fpm
+        image: local/php:${PHP_VERSION}-fpm
+        build:
+            context: ./php-fpm
+            args:
+                PHP_VERSION: ${PHP_VERSION}
+                TZ: ${TZ}
+                USER_ID: ${USER_ID}
+                GROUP_ID: ${GROUP_ID}
+        depends_on:
+            -   postgres
+            -   redis
+            -   rabbit
+        restart: unless-stopped
+        extra_hosts:
+            -   host.docker.internal:host-gateway
+        volumes:
+            -   ./../app:/app:rw,cached
+            -   ./php-fpm/zsh:/var/www:rw
+        env_file:
+            -   .env
+        networks:
+            -   backend
+
+#    php-worker:
+#        container_name: php-worker
+#        image: local/php-worker:${PHP_VERSION}-fpm
+#        build:
+#            context: ./php-worker
+#            args:
+#                PHP_VERSION: ${PHP_VERSION}
+#                TZ: ${TZ}
+#                USER_ID: ${USER_ID}
+#                GROUP_ID: ${GROUP_ID}
+#        depends_on:
+#            -   postgres
+#            -   redis
+#            -   rabbit
+#        restart: unless-stopped
+#        extra_hosts:
+#            -   host.docker.internal:host-gateway
+#        volumes:
+#            -   ./../book:/book:rw,cached
+#            -   ./php-worker/supervisord.d:/etc/supervisord.d
+#        env_file:
+#            -   .env
+#        networks:
+#            -   backend
+
+    nginx:
+        container_name: nginx
+        image: local/nginx:${NGINX_VERSION}
+        build:
+            context: ./nginx
+            args:
+                NGINX_VERSION: ${NGINX_VERSION}
+                NGINX_HOST: ${NGINX_HOST}
+                TZ: ${TZ}
+        depends_on:
+            -   php-fpm
+        restart: unless-stopped
+        ports:
+            -   "80:80"
+            -   "443:443"
+        volumes:
+            -   ./../app/public:/app/public
+            -   ./nginx/nginx.conf:/etc/nginx/nginx.conf
+            -   ./nginx/conf.d:/etc/nginx/conf.d
+            -   nginx-ssl:/etc/ssl
+        env_file:
+            -   .env
+        command: /bin/bash -c "exec nginx -g 'daemon off;'"
+        networks:
+            -   backend
+
+    postgres:
+        container_name: postgres
+        image: postgres:${POSTGRES_VERSION}
+        restart: unless-stopped
+        ports:
+            -   "5432:5432"
+        volumes:
+            -   ./postgres/master/initdb.d/init-user-db.sql:/docker-entrypoint-initdb.d/init-user-db.sql
+            -   postgres-master:/var/lib/postgresql/data
+        env_file:
+            -   ./postgres/master/.env.master
+        networks:
+            -   backend
+
+    redis:
+        container_name: redis
+        image: redis:${REDIS_VERSION}
+        restart: unless-stopped
+        ports:
+            -   "6379:6379"
+        networks:
+            -   backend
+
+    rabbit:
+        container_name: rabbit
+        image: rabbitmq:${RABBITMQ_VERSION}
+        restart: unless-stopped
+        ports:
+            -   "15672:15672"
+        networks:
+            -   backend
+
+    mailcatcher:
+        container_name: mailcatcher
+        image: schickling/mailcatcher
+        depends_on:
+            -   nginx
+        restart: unless-stopped
+        ports:
+            -   "1080:1080"
+        networks:
+            -   backend
+
+volumes:
+    nginx-ssl:
+    postgres-master:
+        driver: local

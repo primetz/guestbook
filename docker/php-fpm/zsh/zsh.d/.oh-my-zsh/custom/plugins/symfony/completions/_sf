@@ -1,0 +1,107 @@
+#compdef sf
+
+_sf() {
+    local curcontext="${curcontext}" state line ret=1
+    typeset -A opt_args
+
+    _arguments '1: :->cmds' '*: :->args' && ret=0
+
+    local cmd=("${words[1]}")
+    local subcmd="${line[1]}"
+
+    if [[ "${subcmd}" == 'open' ]]; then
+        return
+    fi
+
+    if [[ "${subcmd}" == 'php' ]]; then
+        _php && return
+    fi
+
+    if [[ "${subcmd}" == 'psql' ]]; then
+        _arguments '*: :' \
+            {-c+,--command=}'[Execute SQL command]' \
+            {-f+,--file=}':SQL file to read:_files' \
+            {-l,--list}'[List databases]' \
+            {-v+,--set=,--variable=}'[Set SQL variable]' \
+            {-V,--version}'[Output version information, then exit]' \
+            {-X,--no-psqlrc}'[Don'\''t read ~/.psqlrc]' \
+            {-1,--single-transaction}'[Restore as a single transaction]' \
+            {-\?,--help=}'[Display help]' \
+            {-a,--echo-all}'[Print commands read]' \
+            {-b,--echo-errors}'[Echo failed commands]' \
+            {-e,--echo-queries}'[Display queries submitted]' \
+            {-E,--echo-hidden}'[Display hidden queries]' \
+            {-L,--log-file=}'[Send session log to file]' \
+            {-n,--no-readline}'[Disable enhanced command line editing (readline)]' \
+            {-o+,--output=}':query output:_files' \
+            {-q,--quiet}'[Non verbose mode]' \
+            {-s,--single-step}'[Prompt before each query]' \
+            {-S,--single-line}'[Newline sends query]' \
+            {-A,--no-align}'[Unaligned output mode]' \
+            --csv'[CSV (Comma-Separated Values) table output mode]' \
+            {-F+,--field-separator=}':field separator char:' \
+            {-H,--html}'[HTML output]' \
+            {-P+,--pset=}':set psql variable:' \
+            {-R+,--record-separator=}'[Record separator char]' \
+            {-t,--tuples-only}'[Don'\''t display header/footer]' \
+            {-T+,--table-attr=}'[HTML table options]' \
+            {-x,--expanded}'[One column per line]' \
+            {-z,--field-separator-zero}'[Set field separator for unaligned output to zero byte]' \
+            {-0,--record-separator-zero}'[Set record separator for unaligned output to zero byte]'
+        return
+    fi
+
+    if [[ "${subcmd}" == 'composer' ]]; then
+        cmd+=("${subcmd}")
+        subcmd="${line[2]}"
+
+        _arguments '1: :->cmds' '2: :->cmds' '*: :->args' && ret=0
+    fi
+
+    case ${state} in
+        cmds)
+            IFS=$'\n' local cmds_list=(
+                $("${cmd[@]}" --no-ansi 2>/dev/null | __symfony_complete_commands)
+            )
+
+            if [[ "${#cmd[@]}" == 1 ]]; then
+                cmds_list+=(
+                    $'serve[Run a local web server]'
+                    $'start[Run a local web server]'
+                    $'stop[Stop a local web server]'
+                    $'open[Open the local project in a browser]'
+                    $'run[Run a program with environment depending on the current context]'
+                    $'php[Run PHP (version depends on project\'s configuration)]'
+                    $'composer[Run Composer without memory limit]'
+                    $'phpunit[Run PHPUnit using the configured PHP version]'
+                    $'phive[Run PHIVE using the configured PHP version]'
+                    $'status[Get the local web server status]'
+                    $'mails[Open the local project mail catcher web interface in a browser]'
+                    $'psql[Run psql]'
+                )
+            fi
+
+            _values '' ${cmds_list} && ret=0
+            ;;
+        args)
+            local -a opts_list=()
+
+            if [[ "${line[1]}" == 'phpunit' ]]; then
+                IFS=$'\n' opts_list+=(
+                    $'-d[Sets a php.ini value]'
+                    $("${cmd[@]}" "${subcmd}" --help 2>/dev/null | __symfony_complete_options_extract)
+                )
+            else
+                IFS=$'\n' opts_list+=(
+                    $("${cmd[@]}" "${subcmd}" --help --no-ansi 2>/dev/null | __symfony_complete_options)
+                )
+            fi
+
+            _arguments '*: :_files' ${opts_list} && ret=0
+            ;;
+    esac
+
+    return ret
+} 2>/dev/null
+
+_sf "$@"

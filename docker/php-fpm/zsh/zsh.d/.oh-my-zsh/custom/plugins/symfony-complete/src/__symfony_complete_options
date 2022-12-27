@@ -1,0 +1,7 @@
+#!/usr/bin/env zsh
+
+__symfony_complete_options() {
+    command sed -e '1,/^Options/d' -e '/^Help/,$d' | __symfony_complete_options_extract
+}
+
+__symfony_complete_options "$@"

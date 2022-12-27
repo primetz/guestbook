@@ -1,0 +1,10 @@
+CREATE ROLE example_user WITH LOGIN CREATEDB PASSWORD 'example_password';
+
+CREATE DATABASE example_db;
+
+\c book
+
+GRANT CREATE ON SCHEMA public TO example_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO example_user;
+
+\q

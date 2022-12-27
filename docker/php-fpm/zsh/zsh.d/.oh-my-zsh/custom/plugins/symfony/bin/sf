@@ -1,0 +1,482 @@
+#!/usr/bin/env zsh
+
+declare -r app_name="${0##*/}"
+
+main() {
+    config_load_env_files
+
+    declare -r app_runner="$(runner_detect)"
+    declare -r app_console="$(console_detect)"
+
+    [[ -n "${app_runner}" ]] || fail 'Runner is not configured.'
+
+    local cmd="${1}" && shift 2>/dev/null
+
+    case "${cmd}" in
+        serve|start)
+            app_serve "$@"
+            ;;
+        stop)
+            app_stop "$@"
+            ;;
+        status)
+            app_status "$@"
+            ;;
+        open)
+            app_open "$@"
+            ;;
+        mails)
+            app_mails "$@"
+            ;;
+        run)
+            run "$@"
+            ;;
+        php)
+            php_run "$@"
+            ;;
+        composer)
+            composer_run "$@"
+            ;;
+        phpunit)
+            phpunit_run "$@"
+            ;;
+        phive)
+            phive_run "$@"
+            ;;
+        psql)
+            psql_run "$@"
+            ;;
+        *)
+            console_run "${cmd}" "$@"
+    esac
+}
+
+app_serve() {
+    case "$(runner_name)" in
+        docker|docker-compose)
+            docker_compose_run up "$@"
+            ;;
+        ddev)
+            ddev start "$@"
+            ;;
+        symfony)
+            symfony serve "$@"
+            ;;
+        local)
+            local_serve "$@"
+            ;;
+        *)
+            runner_not_supported
+            ;;
+    esac
+}
+
+app_stop() {
+    case "$(runner_name)" in
+        docker|docker-compose)
+            docker_compose_run down "$@"
+            ;;
+        ddev)
+            ddev stop "$@"
+            ;;
+        symfony)
+            symfony server:stop "$@"
+            ;;
+        *)
+            runner_not_supported
+            ;;
+    esac
+}
+
+app_status() {
+    echo "Runner: ${app_runner}"
+    echo "Console: ${app_console}\n"
+
+    php_run --version
+
+    echo
+
+    case "$(runner_name)" in
+        docker|docker-compose)
+            docker_compose_run ps "$@"
+            ;;
+        ddev)
+            ddev status "$@"
+            ;;
+        symfony)
+            echo "Symfony binary: $(which symfony)\n"
+            symfony server:status "$@"
+            ;;
+        local)
+            echo "PHP binary: $(which php)"
+            ;;
+    esac
+}
+
+app_open() {
+    declare -r urlpath="${1##/}"
+
+    case "$(runner_name)" in
+        docker|docker-compose)
+            open "${SF_OPEN_URL:-https://localhost}/${urlpath}" 2>/dev/null
+            ;;
+        ddev)
+            ddev launch "$@" 2>/dev/null
+            ;;
+        symfony)
+            symfony open:local "${urlpath+--path=/}${urlpath}"
+            ;;
+        *)
+            open "${SF_OPEN_URL:-http://127.0.0.1:8000}/${urlpath}" 2>/dev/null
+            ;;
+    esac
+}
+
+app_mails() {
+    case "$(runner_name)" in
+        docker|docker-compose)
+            if (( $+commands[symfony] )); then
+                symfony open:local:webmail "$@"
+                return
+            fi
+            ;&
+        ddev)
+            ddev launch -m "$@" 2>/dev/null
+            ;;
+        symfony)
+            symfony open:local:webmail "$@"
+            ;;
+        *)
+            open 'http://localhost:1080' 2>/dev/null
+            ;;
+    esac
+}
+
+run() {
+    if runner_is 'symfony'; then
+        symfony run "$@"
+        return
+    fi
+
+    runner_run "$@"
+}
+
+php_run() {
+    if runner_is 'symfony'; then
+        symfony php "$@"
+        return
+    fi
+
+    runner_run php "$@"
+}
+
+composer_run() {
+    if runner_is 'symfony'; then
+        symfony composer "$@"
+        return
+    fi
+
+    runner_run composer "$@"
+}
+
+phpunit_run() {
+    declare -r phpunit="$(phpunit_find)"
+
+    if [[ -n "${phpunit}" ]]; then
+        php_run "${phpunit}" "$@"
+        return
+    fi
+
+    run phpunit "$@"
+}
+
+phpunit_find() {
+    declare phpunit="$(find_first_existing_file \
+        'bin/phpunit' \
+        'vendor/bin/phpunit' \
+    )"
+
+    if [[ -n "${phpunit}" ]]; then
+        echo "${phpunit}"
+        return
+    fi
+
+    if runner_is 'symfony'; then
+        phpunit="$(which phpunit 2>/dev/null)"
+
+        if [[ $? -eq 0 && -f "${phpunit}" ]]; then
+            echo "${phpunit}"
+            return
+        fi
+    fi
+
+    return 1
+}
+
+phive_run() {
+    declare -r phive="$(phive_find)"
+
+    if [[ -n "${phive}" ]]; then
+        php_run "${phive}" "$@"
+        return
+    fi
+
+    run phive "$@"
+}
+
+phive_find() {
+    declare phive="$(find_first_existing_file \
+        'bin/phive' \
+        'bin/phive.phar' \
+        'phive' \
+        'phive.phar' \
+    )"
+
+    if [[ -n "${phive}" ]]; then
+        echo "${phive}"
+        return
+    fi
+
+    if runner_is 'symfony'; then
+        phive="$(which phive 2>/dev/null)"
+
+        if [[ $? -eq 0 && -f "${phive}" ]]; then
+            echo "${phive}"
+            return
+        fi
+    fi
+
+    return 1
+}
+
+console_run() {
+    if [[ ! -f "${app_console}" ]]; then
+        error "Console not found: ${app_console}"
+        return 1
+    fi
+
+    if runner_is 'symfony' && console_is_symfony; then
+        symfony console "$@"
+        return
+    fi
+
+    runner_run php "${app_console}" "$@"
+}
+
+console_detect() {
+    echo "${SF_CONSOLE:-bin/console}"
+}
+
+console_is_symfony() {
+    [[ "${app_console}" == 'bin/console' ]]
+}
+
+console_env() {
+    console_is_symfony || return
+
+    console_run debug:container --no-ansi --env-var "${1}" \
+        | sed -nE -e 's/^[[:space:]]*Processed value[[:space:]]+"([^"]+)"/\1/p'
+}
+
+psql_run() {
+    case "$(runner_name)" in
+        docker|docker-compose)
+            declare -r database_url="$(psql_database_url)"
+            declare -r service="$(psql_database_host "${database_url}")"
+
+            docker_compose_run exec -- "${service}" psql "${database_url}" "$@"
+            ;;
+        ddev)
+            ddev psql "$@"
+            return
+            ;;
+        symfony)
+            if docker_find_compose_file &>/dev/null; then
+                symfony run psql "$@"
+                return
+            fi
+            ;&
+        *)
+            declare -r database_url="$(psql_database_url)"
+
+            psql "${database_url}" "$@"
+            ;;
+    esac
+}
+
+psql_database_url() {
+    declare -r database_url="$(console_env DATABASE_URL)"
+
+    echo "${database_url//\?*}"
+}
+
+psql_database_host() {
+    declare host="${1##*//*@}"
+
+    echo "${host%%:*}"
+}
+
+symfony_cli_enabled() {
+    config_is_feature_enabled "${SF_SYMFONY_CLI:-on}"
+}
+
+ddev_enabled() {
+    config_is_feature_enabled "${SF_DDEV:-on}"
+}
+
+docker_enabled() {
+    config_is_feature_enabled "${SF_DOCKER:-on}"
+}
+
+docker_find_compose_file() {
+    find_first_existing_file \
+        "${PWD}/docker-compose.yml" \
+        "${PWD}/docker-compose.yaml" \
+    ;
+}
+
+docker_compose_run() {
+    declare -ar cmd=( $(docker_compose_command) )
+
+    "${cmd[@]}" "$@"
+}
+
+docker_compose_command() {
+    (( $+commands[docker-compose] )) \
+        && echo 'docker-compose' \
+        || echo 'docker compose'
+}
+
+local_serve() {
+    local help port=('--port' '8000') root=('--document-root' 'public')
+
+    zmodload zsh/zutil
+    zparseopts -D -F -K -- \
+        {h,-help}=help \
+        -no-ansi=noansi \
+        -port:=port \
+        -document-root:=root \
+        || return 1
+
+    if [[ -n "${help}" ]]; then
+        cat <<HELP
+Run a local web server
+
+Usage:
+
+  ${app_name} [options]
+
+Options:
+
+  --port=value           Preferred HTTP port [default: ${port[2]}]
+  --document-root=value  Project document root [default: ${root[2]}]
+  -h, --help             Show this help
+HELP
+        return 0
+    fi
+
+    exec php -S "127.0.0.1:${port[2]/=}" -t "${root[2]/=}"
+}
+
+local_enabled() {
+    config_is_feature_enabled "${SF_LOCAL:-on}"
+}
+
+runner_run() {
+    runner_is 'local' && "$@" || "${(@s: :)app_runner}" "$@"
+}
+
+runner_detect() {
+    declare runner="${SF_RUNNER}"
+
+    if [[ -n "${runner}" ]]; then
+        echo "${runner}"
+        return
+    fi
+
+    if ddev_enabled && [[ -f "${PWD}/.ddev/config.yaml" ]]; then
+        echo 'ddev exec --'
+        return
+    fi
+
+    if docker_enabled; then
+        declare -r compose_file="$(docker_find_compose_file)"
+
+        if [[ -f "${compose_file}" ]]; then
+            declare -ra services=(
+                $(sed -nE -e 's/^[[:space:]]+(php|app+):.*$/\1/p' <"${compose_file}" 2>/dev/null)
+            )
+
+            if [[ -n "${services[1]}" ]]; then
+                echo "$(docker_compose_command) exec -- ${services[1]}"
+                return
+            fi
+        fi
+    fi
+
+    if symfony_cli_enabled && (( $+commands[symfony] )) then
+        echo 'symfony'
+        return
+    fi
+
+    if local_enabled; then
+        echo 'local'
+        return
+    fi
+
+    return 1
+}
+
+runner_is() {
+    [[ "$1" == "$(runner_name)" ]]
+}
+
+runner_name() {
+    echo "${app_runner%% *}"
+}
+
+runner_not_supported() {
+    fail "Not supported by current runner: ${app_runner}"
+}
+
+config_load_env_files() {
+    [[ -f "${PWD}/.env" ]] && config_process_envs <"${PWD}/.env"
+    [[ -f "${PWD}/.env.local" ]] && config_process_envs <"${PWD}/.env.local"
+}
+
+config_process_envs() {
+    grep -E '^[[:space:]]*SF_\w+=' | while IFS='=' read -r key value; do
+        export "${key}"="$(unquote "${value}")"
+    done
+}
+
+config_is_feature_enabled() {
+    [[ ! "${1}" =~ '^(0|no|off|false|disabled?)$' ]]
+}
+
+find_first_existing_file() {
+    for file in "$@"; do
+        if [[ -f "$file" ]]; then
+            echo "${file}" && return
+        fi
+    done
+
+    return 1
+}
+
+fail() {
+    error "$@"
+    exit 1
+}
+
+error() {
+    echo "$@" >&2
+}
+
+unquote() {
+    declare -r val="${1#['\"]}"
+
+    echo "${val%['\"]}"
+}
+
+main "$@"
