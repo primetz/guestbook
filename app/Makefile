@@ -7,7 +7,7 @@ RUN_DEV_PHP_WORKER_COMMAND = "symfony run -d --watch=config,src,templates,vendor
 .PHONY: admin tests dev-up dev-down drop prune php
 
 admin:
-	@php bin/console doctrine:query:sql -n "INSERT INTO admin VALUES (nextval('admin_id_seq'), 'admin', '[\"ROLE_ADMIN\"]', '\$$2y\$$13\$$fETyH/TyFaxhLtjV7I5qdecQnRNeP3Z4/klS4d9MopSfJ6pEsBfuG')"
+	@php bin/console doctrine:query:sql -n "INSERT INTO admin VALUES (nextval('admin_id_seq'), 'admin', '[\"ROLE_ADMIN\"]', '\$$2y\$$13\$$k03FmmZzF.TkseyyZK7Dc.tgAKlNYbMIFRLCijy/6Fxc0CRqtKdGq')"
 	@echo Uername: admin
 	@echo Password: admin
 
