@@ -51,6 +51,8 @@ class CommentCrudController extends AbstractCrudController
             ->setUploadDir('/public/uploads/photos')
             ->setLabel('Photo');
 
+        yield TextField::new('state');
+
         $createdAt = DateTimeField::new('createdAt')
             ->renderAsChoice()
             ->setFormTypeOptions([
