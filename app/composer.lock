@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "17ed4d4e3536aea7f0826a4f873cfee8",
+    "content-hash": "b6296baa20b1e794f29d4edd9bfc4dbb",
     "packages": [
         {
             "name": "doctrine/annotations",
@@ -2544,16 +2544,16 @@
         },
         {
             "name": "symfony/cache",
-            "version": "v6.2.2",
+            "version": "v6.2.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/cache.git",
-                "reference": "68625530468c5ff4557fc8825dcfa478b94a8309"
+                "reference": "ddd1a70bfdf4ed19facad0db689c7bca979d322e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/cache/zipball/68625530468c5ff4557fc8825dcfa478b94a8309",
-                "reference": "68625530468c5ff4557fc8825dcfa478b94a8309",
+                "url": "https://api.github.com/repos/symfony/cache/zipball/ddd1a70bfdf4ed19facad0db689c7bca979d322e",
+                "reference": "ddd1a70bfdf4ed19facad0db689c7bca979d322e",
                 "shasum": ""
             },
             "require": {
@@ -2620,7 +2620,7 @@
                 "psr6"
             ],
             "support": {
-                "source": "https://github.com/symfony/cache/tree/v6.2.2"
+                "source": "https://github.com/symfony/cache/tree/v6.2.4"
             },
             "funding": [
                 {
@@ -2636,7 +2636,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2022-12-16T12:37:34+00:00"
+            "time": "2022-12-29T16:29:13+00:00"
         },
         {
             "name": "symfony/cache-contracts",
