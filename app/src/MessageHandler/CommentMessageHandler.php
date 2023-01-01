@@ -7,6 +7,9 @@ use App\Repository\CommentRepository;
 use App\Service\SpamChecker\SpamCheckerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Bridge\Twig\Mime\NotificationEmail;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Workflow\WorkflowInterface;
@@ -16,12 +19,14 @@ final class CommentMessageHandler
 {
 
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly CommentRepository      $commentRepository,
-        private readonly SpamCheckerInterface   $akismetSpamChecker,
-        private readonly MessageBusInterface    $bus,
-        private readonly WorkflowInterface      $commentStateMachine,
-        private readonly ?LoggerInterface       $logger = null,
+        private readonly EntityManagerInterface              $entityManager,
+        private readonly CommentRepository                   $commentRepository,
+        private readonly SpamCheckerInterface                $akismetSpamChecker,
+        private readonly MessageBusInterface                 $bus,
+        private readonly WorkflowInterface                   $commentStateMachine,
+        private readonly MailerInterface                     $mailer,
+        #[Autowire('%admin_email%')] private readonly string $adminEmail,
+        private readonly ?LoggerInterface                    $logger = null,
     )
     {
     }
@@ -30,6 +35,10 @@ final class CommentMessageHandler
     {
 
         $comment = $this->commentRepository->find($message->getId());
+
+        if (!$comment) {
+            return;
+        }
 
         if ($this->commentStateMachine->can($comment, 'accept')) {
 
@@ -49,12 +58,13 @@ final class CommentMessageHandler
 
         } elseif ($this->commentStateMachine->can($comment, 'publish') || $this->commentStateMachine->can($comment, 'publish_ham')) {
 
-            $this->commentStateMachine->apply(
-                $comment,
-                $this->commentStateMachine->can($comment, 'publish') ? 'publish' : 'publish_ham'
+            $this->mailer->send((new NotificationEmail())
+                ->subject('New comment posted')
+                ->htmlTemplate('emails/comment_notification.html.twig')
+//                ->from($this->adminEmail)
+                ->to($this->adminEmail)
+                ->context(['comment' => $comment])
             );
-
-            $this->entityManager->flush();
 
         } elseif ($this->logger) {
 
