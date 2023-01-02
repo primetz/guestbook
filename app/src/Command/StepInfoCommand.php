@@ -15,7 +15,7 @@ use Symfony\Contracts\Cache\ItemInterface;
 
 #[AsCommand(
     name: 'app:step:info',
-    description: 'Add a short description for your command',
+    description: 'Show tag for last commit',
 )]
 class StepInfoCommand extends Command
 {
