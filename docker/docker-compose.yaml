@@ -21,6 +21,7 @@ services:
             -   postgres
             -   redis
             -   rabbit
+            -   nodejs
         restart: unless-stopped
         extra_hosts:
             -   host.docker.internal:host-gateway
@@ -56,6 +57,20 @@ services:
 #            -   .env
 #        networks:
 #            -   backend
+
+    nodejs:
+        container_name: nodejs
+        image: local/nodejs:${NODEJS_VERSION}-slim
+        build:
+            context: ./nodejs
+            args:
+                NODEJS_VERSION: ${NODEJS_VERSION}
+        volumes:
+            -   ./../app:/app:rw,cached
+        env_file:
+            -   .env
+        networks:
+            -   backend
 
     nginx:
         container_name: nginx

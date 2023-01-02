@@ -2,9 +2,11 @@ SHELL := /bin/bash
 DOCKER_COMPOSE_FILE_PATH = ./../docker/docker-compose.yaml
 PHP_FPM = php-fpm
 PHP_FPM_SHELL = zsh
+NODEJS = nodejs
+NODEJS_SHELL = bash
 RUN_DEV_PHP_WORKER_COMMAND = "symfony run -d --watch=config,src,templates,vendor symfony console messenger:consume async"
 
-.PHONY: admin tests dev-up dev-down drop prune php
+.PHONY: admin tests dev-up dev-down drop prune php nodejs
 
 admin:
 	@php bin/console doctrine:query:sql -n "INSERT INTO admin VALUES (nextval('admin_id_seq'), 'admin', '[\"ROLE_ADMIN\"]', '\$$2y\$$13\$$k03FmmZzF.TkseyyZK7Dc.tgAKlNYbMIFRLCijy/6Fxc0CRqtKdGq')"
@@ -23,7 +25,6 @@ dev-up:
 	@sleep 5
 	@docker exec -ti $(PHP_FPM) php bin/console doctrine:migrations:migrate -n
 	@docker exec -ti $(PHP_FPM) symfony run -d --watch=config,src,templates,vendor symfony console messenger:consume async
-	@docker exec -ti $(PHP_FPM) symfony run -d npm run watch
 	@docker exec -ti $(PHP_FPM) $(PHP_FPM_SHELL)
 
 dev-down:
@@ -43,3 +44,6 @@ prune:
 
 php:
 	@docker exec -ti $(PHP_FPM) $(PHP_FPM_SHELL)
+
+nodejs:
+	@docker exec -ti $(NODEJS) $(NODEJS_SHELL)
