@@ -6,6 +6,7 @@ docker/.env
 docker/postgres/master/.env.master
 docker/postgres/master/initdb.d/init-user-db.sql
 docker/php-fpm/zsh/.composer
+docker/php-fpm/zsh/.npm
 docker/php-fpm/zsh/.symfony5
 docker/php-fpm/zsh/.zsh_history
 docker/php-fpm/zsh/zsh.d/.oh-my-zsh/cache/*

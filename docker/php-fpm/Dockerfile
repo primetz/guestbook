@@ -5,14 +5,17 @@ FROM php:${PHP_VERSION}-fpm
 ARG TZ
 ARG USER_ID
 ARG GROUP_ID
+ARG NODEJS_VERSION
 
 RUN apt-get update && apt-get install --no-install-recommends --no-install-suggests -y \
+        gpg \
         git \
         graphviz \
         curl \
         openssl \
         htop \
         libmemcached-dev \
+        lsb-release \
         cron\
         unzip \
         nano \
@@ -31,7 +34,13 @@ RUN apt-get update && apt-get install --no-install-recommends --no-install-sugge
         librabbitmq-dev \
         libssh-dev \
         libsodium-dev \
-        zsh \
+        zsh
+
+RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | gpg --dearmor | tee /usr/share/keyrings/nodesource.gpg >/dev/null \
+    && gpg --no-default-keyring --keyring /usr/share/keyrings/nodesource.gpg --list-keys \
+    && echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODEJS_VERSION} $(lsb_release -s -c) main" | tee /etc/apt/sources.list.d/nodesource.list \
+    && echo "deb-src [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODEJS_VERSION} $(lsb_release -s -c) main" | tee -a /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update && apt-get install --no-install-recommends --no-install-suggests -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 RUN set -xe \

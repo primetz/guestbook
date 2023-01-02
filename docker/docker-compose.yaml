@@ -13,6 +13,7 @@ services:
             context: ./php-fpm
             args:
                 PHP_VERSION: ${PHP_VERSION}
+                NODEJS_VERSION: ${NODEJS_VERSION}
                 TZ: ${TZ}
                 USER_ID: ${USER_ID}
                 GROUP_ID: ${GROUP_ID}

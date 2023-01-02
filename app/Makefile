@@ -23,6 +23,7 @@ dev-up:
 	@sleep 5
 	@docker exec -ti $(PHP_FPM) php bin/console doctrine:migrations:migrate -n
 	@docker exec -ti $(PHP_FPM) symfony run -d --watch=config,src,templates,vendor symfony console messenger:consume async
+	@docker exec -ti $(PHP_FPM) symfony run -d npm run watch
 	@docker exec -ti $(PHP_FPM) $(PHP_FPM_SHELL)
 
 dev-down:
