@@ -4,6 +4,7 @@ namespace App\MessageHandler;
 
 use App\Message\CommentMessage;
 use App\Repository\CommentRepository;
+use App\Service\ImageOptimizer\ImageOptimizerInterface;
 use App\Service\SpamChecker\SpamCheckerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -26,6 +27,8 @@ final class CommentMessageHandler
         private readonly WorkflowInterface                   $commentStateMachine,
         private readonly MailerInterface                     $mailer,
         #[Autowire('%admin_email%')] private readonly string $adminEmail,
+        private readonly ImageOptimizerInterface             $imageOptimizer,
+        #[Autowire('%photo_dir%')] private readonly string   $photoDir,
         private readonly ?LoggerInterface                    $logger = null,
     )
     {
@@ -65,6 +68,16 @@ final class CommentMessageHandler
                 ->to($this->adminEmail)
                 ->context(['comment' => $comment])
             );
+
+        } elseif ($this->commentStateMachine->can($comment, 'optimize')) {
+
+            if ($comment->getPhotoFilename()) {
+                $this->imageOptimizer->resize($this->photoDir . '/' . $comment->getPhotoFilename());
+            }
+
+            $this->commentStateMachine->apply($comment, 'optimize');
+
+            $this->entityManager->flush();
 
         } elseif ($this->logger) {
 

@@ -30,3 +30,9 @@ services:
 
     App\Service\SpamChecker\SpamCheckerInterface $akismetSpamChecker:
         class: App\Service\SpamChecker\Akismet\AkismetSpamChecker
+
+    App\Service\ImageOptimizer\ImageOptimizerInterface $imageOptimizer:
+        class: App\Service\ImageOptimizer\ImageOptimizer
+
+    Imagine\Image\ImagineInterface:
+        class: Imagine\Gd\Imagine
