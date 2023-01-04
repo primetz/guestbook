@@ -7,6 +7,7 @@ final class CommentMessage
 
     public function __construct(
         private readonly int   $id,
+        private string $reviewUrl,
         private readonly array $context = [],
     )
     {
@@ -15,6 +16,11 @@ final class CommentMessage
     public function getId(): int
     {
         return $this->id;
+    }
+
+    public function getReviewUrl(): string
+    {
+        return $this->reviewUrl;
     }
 
     public function getContext(): array
