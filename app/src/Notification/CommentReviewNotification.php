@@ -20,7 +20,7 @@ class CommentReviewNotification extends Notification implements EmailNotificatio
 
     public function __construct(
         private readonly Comment $comment,
-        private string  $reviewUrl,
+        private readonly string  $reviewUrl,
     )
     {
         parent::__construct('New comment posted');

@@ -6,9 +6,9 @@ final class CommentMessage
 {
 
     public function __construct(
-        private readonly int   $id,
-        private string $reviewUrl,
-        private readonly array $context = [],
+        private readonly int    $id,
+        private readonly string $reviewUrl,
+        private readonly array  $context = [],
     )
     {
     }

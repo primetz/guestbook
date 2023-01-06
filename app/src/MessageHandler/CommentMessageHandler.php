@@ -3,17 +3,18 @@
 namespace App\MessageHandler;
 
 use App\Message\CommentMessage;
+use App\Notification\CommentReviewedNotification;
 use App\Notification\CommentReviewNotification;
 use App\Repository\CommentRepository;
 use App\Service\ImageOptimizer\ImageOptimizerInterface;
 use App\Service\SpamChecker\SpamCheckerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Bridge\Twig\Mime\NotificationEmail;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Notifier\NotifierInterface;
+use Symfony\Component\Notifier\Recipient\Recipient;
 use Symfony\Component\Workflow\WorkflowInterface;
 
 #[AsMessageHandler]
@@ -74,6 +75,8 @@ final class CommentMessageHandler
             $this->commentStateMachine->apply($comment, 'optimize');
 
             $this->entityManager->flush();
+
+            $this->notifier->send(new CommentReviewedNotification($comment), new Recipient($comment->getEmail()));
 
         } elseif ($this->logger) {
 
